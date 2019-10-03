@@ -37,6 +37,7 @@ func (a *application) loadCache(genre string) (*mycache, error) {
 		if err := cch.data.LoadFile(StortagsPath + genreFile); err != nil {
 			return cch, err
 		}
+		fmt.Println(cch.data.ItemCount())
 	}
 	return cch, nil
 }
@@ -97,10 +98,11 @@ func (c *mycache) tagGetTopArtistsGetData(genre string, cfg config) error {
 	urlParams.Add("format", "json")
 	urlParams.Add("tag", genre)
 	urlParams.Add("limit", "500")
-
+	urlParams.Add("page", "0")
+	count := 0
 	for i := 1; ; i++ {
 		m := tagGetTopArtistsData{}
-		urlParams.Add("page", strconv.Itoa(i))
+		urlParams.Set("page", strconv.Itoa(i))
 		uri := constructUrl(UrlApiBase, urlParams)
 		err, _, _ := doRequest("GET", uri, &m, reqHeaders, nil)
 		if err != nil {
@@ -110,7 +112,7 @@ func (c *mycache) tagGetTopArtistsGetData(genre string, cfg config) error {
 		if len(m.Data.Artist) > 0 {
 			for _, v := range m.Data.Artist {
 				c.data.Add(v.Name, v.Url, cache.NoExpiration)
-
+				count++
 			}
 		} else {
 			break
