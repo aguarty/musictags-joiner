@@ -31,13 +31,11 @@ func (a *application) loadCache(genre string) (*mycache, error) {
 		if err := cch.tagGetTopArtistsGetData(genre, a.cfg); err != nil {
 			return cch, err
 		}
-		fmt.Println(cch.data.ItemCount())
 		cch.data.SaveFile(StortagsPath + genreFile)
 	} else {
 		if err := cch.data.LoadFile(StortagsPath + genreFile); err != nil {
 			return cch, err
 		}
-		fmt.Println(cch.data.ItemCount())
 	}
 	return cch, nil
 }
@@ -128,7 +126,7 @@ func (c *mycache) tagGetTopArtistsGetData(genre string, cfg config) error {
 func (a *application) storageBouncer(wg *sync.WaitGroup) {
 
 	var interval time.Duration
-	interval = 1 * time.Second
+	interval = 1 * time.Minute
 
 	for {
 		select {

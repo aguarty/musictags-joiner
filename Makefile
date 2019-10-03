@@ -6,7 +6,7 @@ test:
 	go test -v -mod=vendor ./cmd/*.go
 
 build:
-	go build -race -mod=vendor -ldflags="-w -s" -o .bin/multi-tag-searcher cmd/*.go	
+	go build -mod=vendor -ldflags="-w -s" -o .bin/multi-tag-searcher cmd/*.go	
 
 run:build
 	.bin/multi-tag-searcher
