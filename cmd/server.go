@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"musictags-joiner/internal/genres"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,10 +17,14 @@ import (
 //runServer - RUN!
 func (app *application) runServer() {
 
+	handler, err := app.createHTTPHandler()
+	if err != nil {
+		app.logger.Fatalf("HANDLER: %v", err)
+	}
+
 	server := http.Server{
 		Addr:         app.cfg.Server.Host + ":" + app.cfg.Server.Port,
-		Handler:      app.createHTTPHandler(),
-		ErrorLog:     app.logger.LogError,
+		Handler:      handler,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  15 * time.Second,
@@ -41,7 +46,7 @@ func (app *application) runServer() {
 			app.logger.Fatal("Could not listen this address: ", err.Error())
 		}
 	case <-osSignals:
-		app.logger.Info("Server is shutting down...")
+		app.logger.Info("Server shutting down...")
 		ctxServ, cancelServ := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancelServ()
 		server.SetKeepAlivesEnabled(false)
@@ -50,11 +55,11 @@ func (app *application) runServer() {
 		}
 		app.cancel()
 	}
-	app.logger.Info("Server stoped")
+	app.logger.Info("Server is stoped")
 }
 
 //createHTTPHandler create handler
-func (app *application) createHTTPHandler() http.Handler {
+func (app *application) createHTTPHandler() (http.Handler, error) {
 	mux := chi.NewMux()
 
 	mux.Use(middleware.Recoverer)
@@ -69,22 +74,10 @@ func (app *application) createHTTPHandler() http.Handler {
 	mux.Route("/api", func(api chi.Router) {
 		api.Route("/v1", func(v1 chi.Router) {
 			v1.Use(middleware.SetHeader("Content-Type", "application/json; charset=utf-8;"))
-			v1.Route("/genres", func(genres chi.Router) {
-				genres.Post("/jointags", app.joiningtags)
-				genres.Get("/list", app.genresList)
-			})
+			v1.Mount("/genres", genres.CreateGenresHandler(app.srvGenres))
 		})
 	})
-	return mux
-}
-
-//sendResponse send response
-func (a *application) sendResponse(w http.ResponseWriter, code int, data interface{}) {
-	w.WriteHeader(code)
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		a.logger.Errorf("couldn't send data to connection: %v", err)
-	}
+	return mux, nil
 }
 
 //logging - middleware for logging
@@ -94,7 +87,17 @@ func (a *application) logging() func(http.Handler) http.Handler {
 			start := time.Now()
 			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 			defer func() {
-				a.logger.Debugf("code: %d, latency: %v, id: %s, %s, %s", ww.Status(), time.Since(start), r.Method, r.URL.Path, r.RemoteAddr)
+				switch {
+				case ww.Status() >= 500:
+					a.logger.Errorf("code: %d, latency: %v, id: %s, %s, %s", ww.Status(), time.Since(start), r.Method, r.URL.Path, r.RemoteAddr)
+				case ww.Status() >= 400:
+					a.logger.Warnf("code: %d, latency: %v, id: %s, %s, %s", ww.Status(), time.Since(start), r.Method, r.URL.Path, r.RemoteAddr)
+				case ww.Status() >= 300:
+					a.logger.Infof("code: %d, latency: %v, id: %s, %s, %s", ww.Status(), time.Since(start), r.Method, r.URL.Path, r.RemoteAddr)
+				default:
+					a.logger.Debugf("code: %d, latency: %v, id: %s, %s, %s", ww.Status(), time.Since(start), r.Method, r.URL.Path, r.RemoteAddr)
+				}
+
 			}()
 			next.ServeHTTP(ww, r)
 		})

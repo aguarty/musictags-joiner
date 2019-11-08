@@ -1,22 +1,38 @@
-package main
+package utils
 
 import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"musictags-joiner/pkgs/logger"
 	"net/http"
 	"net/url"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
-func constructUrl(base string, params url.Values) (uri string) {
+var (
+	json = jsoniter.ConfigFastest
+)
+
+//SendResponse send response
+func SendResponse(logger *logger.Logger, w http.ResponseWriter, code int, data interface{}) {
+	w.WriteHeader(code)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		logger.Errorf("couldn't send data to connection: %v", err)
+	}
+}
+
+func ConstructUrl(base string, params url.Values) (uri string) {
 	p := params.Encode()
 	uri = base + "?" + p
 	return
 }
 
 // doRequest doing request
-func doRequest(method string, url string, m interface{}, headers map[string]string, reqBody []byte) (err error, code int, respBody []byte) {
+func DoRequest(method string, url string, m interface{}, headers map[string]string, reqBody []byte) (err error, code int, respBody []byte) {
 
 	req, err := http.NewRequest(method, url, bytes.NewBuffer(reqBody))
 	if err != nil {
@@ -51,7 +67,7 @@ func doRequest(method string, url string, m interface{}, headers map[string]stri
 	return nil, resp.StatusCode, respBody
 }
 
-func containsString(s []string, e string) bool {
+func ContainsString(s []string, e string) bool {
 	for _, a := range s {
 		if a == e {
 			return true

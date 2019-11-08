@@ -2,41 +2,37 @@ package main
 
 import (
 	"context"
+	"musictags-joiner/internal/genres"
+	"musictags-joiner/pkgs/logger"
+	"musictags-joiner/pkgs/storage"
 	"os"
-	"strings"
 	"sync"
-	"time"
-
-	jsoniter "github.com/json-iterator/go"
 )
 
-type application struct {
-	logger *logInterface
-	sync.RWMutex
-	cfg     config
-	storage storage
-	ctx     context.Context
-	cancel  context.CancelFunc
-}
-
-type storage struct {
-	sync.RWMutex
-	cache map[string]*mycache
-}
-
 const (
-	StortagsPath string        = "./stortags/"
-	logFilePath  string        = "./logs"
-	UrlApiBase   string        = "http://ws.audioscrobbler.com/2.0/"
-	cachettl     time.Duration = 1 * time.Hour
-
-	MethodTagGetTopArtists string = "tag.gettopartists"
-	MethodTagGetTopTags    string = "tag.getTopTags"
+	serviceName string = "musictags-joiner"
 )
 
 var (
-	json = jsoniter.ConfigFastest
-	r    = strings.NewReplacer(" ", "_")
+	version    = "No Version Provided"
+	commitHash = "No Git Commit Hash Provided"
+)
+
+type application struct {
+	logger *logger.Logger
+	ctx    context.Context
+	cancel context.CancelFunc
+	cfg    config
+	//services
+	srvGenres *genres.Service
+	// storage
+	sync.RWMutex
+	storage *storage.Storage
+}
+
+const (
+	stortagsPath string = "./stortags/"
+	logFilePath  string = "./logs"
 )
 
 func main() {
@@ -44,21 +40,21 @@ func main() {
 	if err := app.initConfig(""); err != nil {
 		os.Exit(1)
 	}
-	app.storage.cache = make(map[string]*mycache)
+	app.logger = logger.Init(app.cfg.LogLevel, app.cfg.LogFile)
 
-	if _, err := os.Stat(StortagsPath); os.IsNotExist(err) {
-		os.Mkdir(StortagsPath, 0755)
+	app.storage = storage.NewStorage(app.cfg.Apikey, stortagsPath)
+	app.srvGenres = genres.NewService(app.storage, app.logger, stortagsPath)
+
+	if _, err := os.Stat(stortagsPath); os.IsNotExist(err) {
+		os.Mkdir(stortagsPath, 0755)
 	}
 
 	app.ctx, app.cancel = context.WithCancel(context.Background())
-	app.logger = initLogger(&app.cfg.LogLevel, &app.cfg.LogFile)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go app.storageBouncer(&wg)
+	go app.storage.StorageBouncer(&wg, app.ctx)
 
 	app.runServer()
-
 	wg.Wait()
-	app.logger.Output.Close()
 }

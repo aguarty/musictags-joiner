@@ -1,10 +1,4 @@
-package main
-
-import (
-	"time"
-
-	"github.com/patrickmn/go-cache"
-)
+package storage
 
 type tagGetTopArtistsData struct {
 	Data struct {
@@ -19,17 +13,12 @@ type tagGetTopArtistsData struct {
 	} `json:"topartists"`
 }
 
-type resGetTopArtists struct {
-	Name string `json:"name"`
-	Url  string `json:"url"`
-}
-
 type artist struct {
 	Name string `json:"name"`
 	Url  string `json:"url"`
 }
 
-type mycache struct {
-	data    *cache.Cache
-	expTime time.Time
+type ResGetTopArtists struct {
+	Name string `json:"name"`
+	Url  string `json:"url"`
 }
