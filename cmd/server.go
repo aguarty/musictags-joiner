@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"musictags-joiner/internal/genres"
+	"musictags-joiner/internal/utils"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,6 +14,14 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
 )
+
+type apiResponse struct {
+	Code       int    `json:"code,omitempty"`
+	Date       string `json:"date,omitempty"`
+	Error      string `json:"error,omitempty"`
+	Version    string `json:"version,omitempty"`
+	CommitHash string `json:"commit,omitempty"`
+}
 
 //runServer - RUN!
 func (app *application) runServer() {
@@ -70,6 +79,10 @@ func (app *application) createHTTPHandler() (http.Handler, error) {
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		AllowCredentials: true,
 	}).Handler)
+
+	mux.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		utils.SendResponse(app.logger, w, http.StatusOK, &apiResponse{Code: http.StatusOK, Date: time.Now().String(), Version: version, CommitHash: commitHash})
+	})
 
 	mux.Route("/api", func(api chi.Router) {
 		api.Route("/v1", func(v1 chi.Router) {
