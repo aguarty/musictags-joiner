@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 )
 
-// CreateAgencysHandler -
+// CreateGenresHandler -
 func CreateGenresHandler(srv *Service) http.Handler {
 	router := chi.NewRouter()
 	router.Use(middleware.StripSlashes)
