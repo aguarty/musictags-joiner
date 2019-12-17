@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"musictags-joiner/internal/artists"
 	"musictags-joiner/internal/genres"
 	"musictags-joiner/internal/utils"
 	"net/http"
@@ -88,6 +89,7 @@ func (app *application) createHTTPHandler() (http.Handler, error) {
 		api.Route("/v1", func(v1 chi.Router) {
 			v1.Use(middleware.SetHeader("Content-Type", "application/json; charset=utf-8;"))
 			v1.Mount("/genres", genres.CreateGenresHandler(app.srvGenres))
+			v1.Mount("/artists", artists.CreateArtistsHandler(app.srvArtists))
 		})
 	})
 	return mux, nil

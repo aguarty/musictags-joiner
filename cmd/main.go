@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"musictags-joiner/internal/artists"
 	"musictags-joiner/internal/genres"
 	"musictags-joiner/pkgs/logger"
 	"musictags-joiner/pkgs/storage"
@@ -24,7 +25,8 @@ type application struct {
 	cancel context.CancelFunc
 	cfg    config
 	//services
-	srvGenres *genres.Service
+	srvGenres  *genres.Service
+	srvArtists *artists.Service
 	// storage
 	sync.RWMutex
 	storage *storage.Storage
@@ -44,6 +46,7 @@ func main() {
 
 	app.storage = storage.NewStorage(app.cfg.Apikey, stortagsPath)
 	app.srvGenres = genres.NewService(app.storage, app.logger, stortagsPath)
+	app.srvArtists = artists.NewService(app.storage, app.logger, stortagsPath)
 
 	if _, err := os.Stat(stortagsPath); os.IsNotExist(err) {
 		os.Mkdir(stortagsPath, 0755)
